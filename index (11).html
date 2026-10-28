@@ -1,0 +1,681 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Майнинг Прыжок</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;800&family=Manrope:wght@500;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+/* Layout: one-screen app — top balance bar, swappable screen, bottom tab bar (Telegram Mini App shape) */
+:root{
+  --ink:#f2f8f3; --panel:#ffffff; --panel2:#e4f1e8; --line:#d2e5d8;
+  --fg:#12301f; --muted:#5f7b69; --gold:#1d9e57; --gold-d:#157a42;
+  --up:#14a053; --down:#d94848; --r-common:#5f9e74; --r-rare:#3f8fd6; --r-legend:#d1901a; --star:#f2a900; --sky1:#e9f7ee; --sky2:#c6ead3;
+  --f-disp:"Unbounded","Arial Black",system-ui,sans-serif;
+  --f-body:"Manrope",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-num:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:light;
+}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{background:var(--ink);color:var(--fg);font-family:var(--f-body);font-size:14px;overflow:hidden;-webkit-tap-highlight-color:transparent;user-select:none}
+.app{height:100%;display:flex;flex-direction:column;max-width:520px;margin:0 auto}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-block:12px 10px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.bal small{display:block;color:var(--muted);font-size:11px;letter-spacing:.08em;text-transform:uppercase}
+.bal b{font-family:var(--f-num);font-size:26px;font-weight:700;color:var(--gold);font-variant-numeric:tabular-nums}
+.rate{text-align:right;font-family:var(--f-num);font-size:12px;color:var(--muted)}
+.rate b{color:var(--up);font-size:14px;display:block}
+.ticker{overflow:hidden;border-block:1px solid var(--line);background:var(--panel);white-space:nowrap;font-family:var(--f-num);font-size:12px}
+.ticker-in{display:inline-flex;gap:22px;padding:7px 0;animation:tick 28s linear infinite}
+@keyframes tick{to{transform:translateX(-50%)}}
+@media (prefers-reduced-motion:reduce){.ticker-in{animation:none}}
+.tk{display:inline-flex;gap:6px}.tk i{font-style:normal;color:var(--muted)}
+.up{color:var(--up)}.down{color:var(--down)}
+main{flex:1;min-height:0;overflow-y:auto;padding-block:14px 18px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+main.game{padding:0;overflow:hidden;position:relative}
+h2{font-family:var(--f-disp);font-size:18px;font-weight:800;margin:0 0 4px;text-wrap:balance}
+.sub{color:var(--muted);margin:0 0 14px;line-height:1.45}
+.stack{display:grid;gap:10px}
+.card{display:grid;grid-template-columns:52px 1fr auto;gap:12px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px}
+.card.locked{opacity:.45}
+.chip{width:52px;height:52px;border-radius:12px;display:grid;place-items:center;font-family:var(--f-disp);font-size:12px;font-weight:800;color:#0d0e19;position:relative;overflow:hidden}
+.chip::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(90deg,transparent 0 6px,rgba(0,0,0,.12) 6px 7px)}
+.chip span{position:relative;z-index:1}
+.chip.acc{background:var(--gold);color:#fff}
+.card,.price-row,.skin,.claim{box-shadow:0 1px 2px rgba(18,48,31,.06)}
+.meta{min-width:0}
+.meta b{font-size:15px;display:block}
+.meta .l{font-family:var(--f-num);font-size:12px;color:var(--muted)}
+.meta .inc{font-family:var(--f-num);font-size:12px;color:var(--up)}
+.btn{font:700 13px var(--f-body);border:0;border-radius:10px;padding:10px 12px;background:var(--gold);color:#fff;cursor:pointer;min-width:84px;font-variant-numeric:tabular-nums}
+.btn:disabled{background:var(--panel2);color:var(--muted);cursor:not-allowed}
+.btn.ghost{background:var(--panel2);color:var(--fg)}
+.btn:focus-visible,.tab:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.claim{display:flex;justify-content:space-between;align-items:center;gap:12px;background:linear-gradient(135deg,#dff3e6,#ffffff);border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:14px}
+.claim .v{font-family:var(--f-num);font-size:20px;color:var(--gold);font-weight:700}
+.claim small{color:var(--muted);display:block;font-size:12px}
+.sect{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:18px 0 8px}
+.skins{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px}
+.skin{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:10px;display:grid;gap:8px;justify-items:center;text-align:center}
+.skin.on{border-color:var(--gold)}
+.skin canvas{width:64px;height:64px}
+.skin b{font-size:13px}
+.price-row{display:grid;grid-template-columns:52px 1fr auto;gap:12px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px}
+.price-row .p{text-align:right;font-family:var(--f-num);font-variant-numeric:tabular-nums}
+.price-row .p b{display:block;font-size:15px}
+.note{font-size:12px;color:var(--muted);line-height:1.5;margin-top:14px}
+nav{display:grid;grid-template-columns:repeat(5,1fr);background:var(--panel);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px);padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px)}
+.tab{background:none;border:0;color:var(--muted);font:700 11px var(--f-body);padding:9px 0 10px;display:grid;justify-items:center;gap:3px;cursor:pointer}
+.tab svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8}
+.tab.on{color:var(--gold)}
+#cv{display:block;width:100%;height:100%;touch-action:none}
+.hud{position:absolute;top:10px;left:max(16px,env(safe-area-inset-left,0px));right:max(16px,env(safe-area-inset-right,0px));display:flex;justify-content:space-between;font-family:var(--f-num);pointer-events:none}
+.hud b{font-size:22px;color:var(--fg)}.hud small{color:var(--muted);display:block;font-size:11px}
+.overlay{position:absolute;inset:0;display:grid;place-items:center;background:rgba(18,48,31,.35);padding-inline:max(16px,env(safe-area-inset-left,0px)) max(16px,env(safe-area-inset-right,0px))}
+.ov{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:20px;width:min(340px,100%);text-align:center;display:grid;gap:10px}
+.ov h3{font-family:var(--f-disp);font-size:22px;margin:0}
+.ov .big{font-family:var(--f-num);font-size:30px;color:var(--gold);font-weight:700}
+.ov p{margin:0;color:var(--muted);line-height:1.45}
+.kv{display:flex;justify-content:space-between;font-family:var(--f-num);font-size:13px}
+.toast{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 70px);transform:translateX(-50%);background:var(--gold);color:#fff;font-weight:700;padding:10px 16px;border-radius:12px;z-index:20;transition:opacity .3s}
+.welcome h3{font-size:20px}
+.prof{display:grid;grid-template-columns:72px 1fr;gap:14px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px}
+.prof canvas{width:72px;height:72px;background:var(--panel2);border-radius:14px}
+.prof .nm{display:flex;gap:8px;min-width:0}
+.prof input{flex:1;min-width:0;font:700 16px var(--f-body);color:var(--fg);background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:9px 10px}
+.prof input:focus-visible{outline:2px solid var(--gold);outline-offset:1px}
+.prof .rk{font-size:12px;color:var(--muted);margin-top:6px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px}
+.stat small{display:block;color:var(--muted);font-size:11px}
+.stat b{font-family:var(--f-num);font-size:15px;font-variant-numeric:tabular-nums}
+.prog{display:grid;gap:6px}
+.prow{display:grid;grid-template-columns:110px 1fr 56px;gap:10px;align-items:center;font-size:13px}
+.prow .bar{height:8px;background:var(--panel2);border-radius:4px;overflow:hidden}
+.prow .bar i{display:block;height:100%;background:var(--gold);border-radius:4px}
+.prow span:last-child{text-align:right;font-family:var(--f-num);color:var(--muted)}
+.achs{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.ach{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px;display:grid;gap:3px}
+.ach b{font-size:13px}.ach small{color:var(--muted);font-size:12px;line-height:1.35}
+.ach .rw{font-family:var(--f-num);font-size:12px;color:var(--gold)}
+.ach.off{opacity:.5}.ach.on{border-color:var(--gold);background:linear-gradient(135deg,#e6f6ec,#ffffff)}
+.lb{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.lr{display:grid;grid-template-columns:30px 28px 1fr auto;gap:10px;align-items:center;padding:10px 12px;border-top:1px solid var(--line);font-size:14px}
+.lr:first-child{border-top:0}
+.lr .n{font-family:var(--f-num);color:var(--muted);text-align:center}
+.lr .nm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700}
+.lr .sc{font-family:var(--f-num);text-align:right;font-variant-numeric:tabular-nums}
+.lr .sc small{display:block;color:var(--muted);font-size:11px}
+.lr.me{background:var(--panel2)}
+.lr .medal{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;color:#fff;font-size:12px;font-weight:700}
+.bchips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.bchip{font:700 12px var(--f-num);background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:5px 10px;color:var(--fg)}
+.cases{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.case{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:10px 8px;display:grid;gap:8px;justify-items:center;text-align:center;min-width:0}
+.case .box{width:54px;height:46px;border-radius:9px;position:relative;box-shadow:inset 0 -8px 0 rgba(0,0,0,.15)}
+.case .box::before{content:"";position:absolute;left:0;right:0;top:14px;height:6px;background:rgba(255,255,255,.55)}
+.case .box::after{content:"";position:absolute;left:22px;top:9px;width:10px;height:16px;border-radius:3px;background:#fff;opacity:.85}
+.case b{font-size:13px}.case small{color:var(--muted);font-size:11px;line-height:1.3}
+.case .btn{min-width:0;width:100%;padding-inline:6px}
+.rar{font:700 10px var(--f-body);letter-spacing:.08em;text-transform:uppercase}
+.chip.star{background:var(--star);color:#fff;font-size:18px}
+.btn.star{background:var(--star);color:#fff}
+.reel{font-family:var(--f-disp);font-size:18px;min-height:52px;display:grid;place-items:center;text-wrap:balance}
+.langs{display:inline-flex;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:3px;gap:3px}
+.langs button{font:700 12px var(--f-body);border:0;background:none;color:var(--muted);padding:6px 12px;border-radius:7px;cursor:pointer}
+.langs button.on{background:var(--panel);color:var(--gold);box-shadow:0 1px 2px rgba(18,48,31,.12)}
+.langs button:focus-visible{outline:2px solid var(--gold);outline-offset:1px}
+.av{width:28px;height:28px;border-radius:50%;background:var(--panel2);display:inline-grid;place-items:center;font-size:16px;line-height:1;overflow:hidden}
+.bigav{width:72px;height:72px;border-radius:14px;background:var(--panel2);display:grid;place-items:center;font-size:40px;line-height:1}
+.avs{display:grid;grid-template-columns:repeat(auto-fill,minmax(44px,1fr));gap:6px}
+.avs button{aspect-ratio:1;border:2px solid var(--line);border-radius:12px;background:var(--panel);font-size:22px;line-height:1;cursor:pointer;display:grid;place-items:center;padding:0;min-width:0}
+.avs button.on{border-color:var(--gold);background:var(--panel2)}
+.avs button:focus-visible{outline:2px solid var(--gold);outline-offset:1px}
+.avs canvas{width:32px;height:32px}
+.lbnote{font-size:12px;color:var(--muted);padding:10px 12px;line-height:1.45}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <header class="top">
+    <div class="bal"><small data-i="bal">Баланс</small><b id="bal">$0.00</b></div>
+    <div class="rate"><b id="rate">+$0</b><span data-i="rateLbl">доход майнинга</span></div>
+  </header>
+  <div class="ticker"><div class="ticker-in" id="ticker"></div></div>
+  <main id="screen"></main>
+  <nav>
+    <button class="tab on" data-t="mine" id="tab-mine"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 10h4M7 14h2M15 10h2v4h-2z"/></svg><span data-i="tMine">Майнинг</span></button>
+    <button class="tab" data-t="jump" id="tab-jump"><svg viewBox="0 0 24 24"><path d="M12 3v12M7 8l5-5 5 5M5 21h14"/></svg><span data-i="tJump">Прыжок</span></button>
+    <button class="tab" data-t="shop" id="tab-shop"><svg viewBox="0 0 24 24"><path d="M12 20V8M7 13l5-5 5 5M5 4h14"/></svg><span data-i="tUpg">Улучшения</span></button>
+    <button class="tab" data-t="store" id="tab-store"><svg viewBox="0 0 24 24"><path d="M12 3l2.6 5.6 6 .7-4.5 4.1 1.2 6L12 16.4 6.7 19.4l1.2-6L3.4 9.3l6-.7z"/></svg><span data-i="tStore">Магазин</span></button>
+    <button class="tab" data-t="profile" id="tab-profile"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg><span data-i="tProfile">Профиль</span></button>
+  </nav>
+</div>
+
+<script>
+/* ===== Языки: ru / uk / en ===== */
+const I18N={
+ru:{avatar:'Аватар',avHero:'Ваш герой',newbie:'Новичок +40% · {t}',newbieW:' Первый час действует бонус новичка: +40% к доходу майнинга.',title:'Майнинг Прыжок',bal:'Баланс',rateLbl:'доход майнинга',per:'/10 мин',tMine:'Майнинг',tJump:'Прыжок',tUpg:'Улучшения',tStore:'Магазин',tProfile:'Профиль',
+ pend:'Намайнено, пока вас не было (до {h} ч)',claim:'Забрать',cardsH:'Майнинг-карты',cardsSub:'Каждая карта приносит доход каждые 10 минут. Следующая открывается после покупки предыдущей. Рекорд в прыжках {r} даёт бонус ×{m} ко всему майнингу.',
+ lvl:'ур.',willGive:'даст',locked:'Закрыто',buy:'Купить',upgrade:'Улучшить',market:'Рынок',liveP:'Живые цены, обновлены в {t}. Обновляются каждую минуту.',offP:'Нет связи с биржей, показаны цены на {t}. В Telegram цены подтягиваются вживую.',d24:'за 24ч',
+ note:'Доллары в игре виртуальные и не выводятся. Цены монет показаны для атмосферы.',
+ upgH:'Улучшения персонажа',upgSub:'Действуют в игре «Прыжок».',max:'Максимум',skins:'Скины',worn:'Надет',wear:'Надеть',forStars:'За звёзды',
+ score:'Счёт',coinsRec:'Монеты · рекорд {r}',howto:'Прыгайте по блокам вверх и собирайте монеты. Управление: зажмите левую или правую половину экрана, на компьютере стрелки.',record:'Рекорд',recBonus:'Бонус рекорда к майнингу',play:'Играть',
+ rocketT:'Ракета: старт с высоты 500',shieldT:'Страховка сработала',newRec:'Новый рекорд!',fall:'Падение',height:'Высота {s}',coins:'Монеты',recPay:'Бонус за рекорд',mineBonus:'Бонус к майнингу',again:'Ещё раз',
+ storeSub:'Открывайте кейсы и выбивайте баффы. Выпавшее попадает в инвентарь, активировать можно когда удобно.',nBuffs:'баффов: {n}',drops:'Что может выпасть',inv:'Инвентарь',invEmpty:'Пока пусто. Откройте первый кейс.',caseN:'{n} кейс',starGift:'Подарок за звёзды',open:'Открыть',activate:'Активировать',toInv:'В инвентарь',
+ starsH:'Звёзды Telegram',starsSub:'Поддержите игру и получите бонусы.',payTg:'Оплата проходит в Telegram.',payNo:'Покупка за звёзды доступна, когда игра открыта в Telegram через бота.',bought:'Куплено',openTg:'Откройте игру в Telegram',invoiceErr:'Не удалось создать счёт',payFail:'Оплата не прошла',noServer:'Нет связи с сервером',thanks:'Спасибо! «{n}» получен',
+ common:'Обычный',rare:'Редкий',legend:'Легендарный',x2mine:'×2 майнинг',disc:'−20% карты',prem:'Премиум ×1.5',off12:'Офлайн 12 ч',r_coins2x:'×2 монеты',r_super:'Суперпрыжок',r_rocket:'Ракета',r_shield:'+2 страховки',vip:'VIP ×2 монеты',
+ bActive:'{n}: активно',bCharges:'{n}: заряды добавлены',allSkins:'Все скины уже есть: +{v}',skinGot:'Скин «{n}»',h:'ч',min:'мин',achT:'Достижение «{n}» +{v}',
+ nameAria:'Имя игрока',save:'Сохранить',place:'Место в рейтинге: <b>{p}</b> из {n}',progress:'Прогресс',games:'Забегов',earned:'Заработано',income:'Доход',achs:'Достижения',cardsOf:'Карты · {a} из {b}',heroOf:'Герой · скинов {a} из {b}',
+ rating:'Рейтинг игроков',lbLocal:'Общий рейтинг появится, когда игра работает через сервер. Сейчас виден только ваш результат.',player:'Игрок',you:'(вы)',nameShort:'Имя от 2 символов',nameSaved:'Имя сохранено',lang:'Язык',miner:'Майнер',
+ welcome:'Стартовый бонус уже на балансе. Купите карту XRP, чтобы запустить майнинг. Денег хватит на пару покупок, дальше копите доход, а в «Прыжке» поднимайте рекорд: он увеличивает доход всех карт.',start:'Начать'},
+uk:{avatar:'Аватар',avHero:'Ваш герой',newbie:'Новачок +40% · {t}',newbieW:' Першу годину діє бонус новачка: +40% до доходу майнінгу.',title:'Майнінг Стрибок',bal:'Баланс',rateLbl:'дохід майнінгу',per:'/10 хв',tMine:'Майнінг',tJump:'Стрибок',tUpg:'Покращення',tStore:'Магазин',tProfile:'Профіль',
+ pend:'Намайнено, поки вас не було (до {h} год)',claim:'Забрати',cardsH:'Майнінг-карти',cardsSub:'Кожна карта приносить дохід кожні 10 хвилин. Наступна відкривається після купівлі попередньої. Рекорд у стрибках {r} дає бонус ×{m} до всього майнінгу.',
+ lvl:'рів.',willGive:'дасть',locked:'Закрито',buy:'Купити',upgrade:'Покращити',market:'Ринок',liveP:'Живі ціни, оновлено о {t}. Оновлюються щохвилини.',offP:'Немає зв’язку з біржею, показано ціни на {t}. У Telegram ціни оновлюються наживо.',d24:'за 24 год',
+ note:'Долари в грі віртуальні й не виводяться. Ціни монет показано для атмосфери.',
+ upgH:'Покращення персонажа',upgSub:'Діють у грі «Стрибок».',max:'Максимум',skins:'Скіни',worn:'Вдягнено',wear:'Вдягти',forStars:'За зірки',
+ score:'Рахунок',coinsRec:'Монети · рекорд {r}',howto:'Стрибайте по блоках угору й збирайте монети. Керування: затисніть ліву або праву половину екрана, на комп’ютері стрілки.',record:'Рекорд',recBonus:'Бонус рекорду до майнінгу',play:'Грати',
+ rocketT:'Ракета: старт з висоти 500',shieldT:'Страховка спрацювала',newRec:'Новий рекорд!',fall:'Падіння',height:'Висота {s}',coins:'Монети',recPay:'Бонус за рекорд',mineBonus:'Бонус до майнінгу',again:'Ще раз',
+ storeSub:'Відкривайте кейси та вибивайте бафи. Випале потрапляє в інвентар, активувати можна будь-коли.',nBuffs:'бафів: {n}',drops:'Що може випасти',inv:'Інвентар',invEmpty:'Поки порожньо. Відкрийте перший кейс.',caseN:'{n} кейс',starGift:'Подарунок за зірки',open:'Відкрити',activate:'Активувати',toInv:'В інвентар',
+ starsH:'Зірки Telegram',starsSub:'Підтримайте гру й отримайте бонуси.',payTg:'Оплата проходить у Telegram.',payNo:'Купівля за зірки доступна, коли гра відкрита в Telegram через бота.',bought:'Куплено',openTg:'Відкрийте гру в Telegram',invoiceErr:'Не вдалося створити рахунок',payFail:'Оплата не пройшла',noServer:'Немає зв’язку із сервером',thanks:'Дякуємо! «{n}» отримано',
+ common:'Звичайний',rare:'Рідкісний',legend:'Легендарний',x2mine:'×2 майнінг',disc:'−20% карти',prem:'Преміум ×1.5',off12:'Офлайн 12 год',r_coins2x:'×2 монети',r_super:'Суперстрибок',r_rocket:'Ракета',r_shield:'+2 страховки',vip:'VIP ×2 монети',
+ bActive:'{n}: активно',bCharges:'{n}: заряди додано',allSkins:'Усі скіни вже є: +{v}',skinGot:'Скін «{n}»',h:'год',min:'хв',achT:'Досягнення «{n}» +{v}',
+ nameAria:'Ім’я гравця',save:'Зберегти',place:'Місце в рейтингу: <b>{p}</b> з {n}',progress:'Прогрес',games:'Забігів',earned:'Зароблено',income:'Дохід',achs:'Досягнення',cardsOf:'Карти · {a} з {b}',heroOf:'Герой · скінів {a} з {b}',
+ rating:'Рейтинг гравців',lbLocal:'Загальний рейтинг з’явиться, коли гра працює через сервер. Зараз видно лише ваш результат.',player:'Гравець',you:'(ви)',nameShort:'Ім’я від 2 символів',nameSaved:'Ім’я збережено',lang:'Мова',miner:'Майнер',
+ welcome:'Стартовий бонус уже на балансі. Купіть карту XRP, щоб запустити майнінг. Грошей вистачить на пару покупок, далі накопичуйте дохід, а в «Стрибку» підвищуйте рекорд: він збільшує дохід усіх карт.',start:'Почати'},
+en:{avatar:'Avatar',avHero:'Your hero',newbie:'Newcomer +40% · {t}',newbieW:' For your first hour you get a newcomer bonus: +40% mining income.',title:'Mining Jump',bal:'Balance',rateLbl:'mining income',per:'/10 min',tMine:'Mining',tJump:'Jump',tUpg:'Upgrades',tStore:'Shop',tProfile:'Profile',
+ pend:'Mined while you were away (up to {h} h)',claim:'Claim',cardsH:'Mining cards',cardsSub:'Each card earns income every 10 minutes. The next card unlocks after you buy the previous one. Your jump record of {r} gives a ×{m} bonus to all mining.',
+ lvl:'lv.',willGive:'gives',locked:'Locked',buy:'Buy',upgrade:'Upgrade',market:'Market',liveP:'Live prices, updated at {t}. Refreshed every minute.',offP:'No connection to the exchange; showing prices as of {t}. Inside Telegram, prices update live.',d24:'24h',
+ note:'In-game dollars are virtual and cannot be withdrawn. Coin prices are shown for flavour.',
+ upgH:'Character upgrades',upgSub:'They apply in the Jump game.',max:'Maxed',skins:'Skins',worn:'Equipped',wear:'Equip',forStars:'For Stars',
+ score:'Score',coinsRec:'Coins · best {r}',howto:'Jump up the blocks and collect coins. Controls: hold the left or right half of the screen, or use the arrow keys.',record:'Best',recBonus:'Record bonus to mining',play:'Play',
+ rocketT:'Rocket: starting at height 500',shieldT:'Safety net saved you',newRec:'New record!',fall:'You fell',height:'Height {s}',coins:'Coins',recPay:'Record bonus',mineBonus:'Mining bonus',again:'Play again',
+ storeSub:'Open cases to win buffs. Drops go to your inventory; activate them whenever you like.',nBuffs:'buffs: {n}',drops:'Possible drops',inv:'Inventory',invEmpty:'Empty for now. Open your first case.',caseN:'{n} case',starGift:'Stars gift',open:'Open',activate:'Activate',toInv:'To inventory',
+ starsH:'Telegram Stars',starsSub:'Support the game and get bonuses.',payTg:'Payment happens in Telegram.',payNo:'Stars purchases work when the game is opened in Telegram through the bot.',bought:'Owned',openTg:'Open the game in Telegram',invoiceErr:'Could not create the invoice',payFail:'Payment failed',noServer:'No connection to the server',thanks:'Thank you! “{n}” received',
+ common:'Common',rare:'Rare',legend:'Legendary',x2mine:'×2 mining',disc:'−20% cards',prem:'Premium ×1.5',off12:'Offline 12 h',r_coins2x:'×2 coins',r_super:'Super jump',r_rocket:'Rocket',r_shield:'+2 safety nets',vip:'VIP ×2 coins',
+ bActive:'{n}: active',bCharges:'{n}: charges added',allSkins:'You own every skin: +{v}',skinGot:'Skin “{n}”',h:'h',min:'min',achT:'Achievement “{n}” +{v}',
+ nameAria:'Player name',save:'Save',place:'Rank: <b>{p}</b> of {n}',progress:'Progress',games:'Runs',earned:'Earned',income:'Income',achs:'Achievements',cardsOf:'Cards · {a} of {b}',heroOf:'Hero · skins {a} of {b}',
+ rating:'Leaderboard',lbLocal:'The shared leaderboard appears when the game runs through the server. For now only your result is shown.',player:'Player',you:'(you)',nameShort:'Name must be at least 2 characters',nameSaved:'Name saved',lang:'Language',miner:'Miner',
+ welcome:'Your starter bonus is on your balance. Buy the XRP card to start mining. You can afford a couple of purchases; after that, save up income and raise your Jump record, which boosts every card.',start:'Start'},
+};
+let LANG='ru';
+const t=(k,v)=>{let s=(I18N[LANG]&&I18N[LANG][k])??I18N.ru[k]??k;if(v)for(const n in v)s=s.split('{'+n+'}').join(v[n]);return s};
+const L=o=>typeof o==='string'?o:(o[LANG]||o.ru);
+function applyStatic(){document.querySelectorAll('[data-i]').forEach(e=>e.textContent=t(e.dataset.i));document.title=t('title');document.documentElement.lang=LANG}
+
+/* ===== Данные ===== */
+const COINS=[ // порядок карт: от XRP до BTC; inc — доход за 10 минут на 1 уровне
+  {id:'ripple',sym:'XRP',name:'XRP',col:'#9fb6c9',price:1.32,ch:0,cost:350,inc:20},
+  {id:'near',sym:'NEAR',name:'NEAR',col:'#c7f0e2',price:4.68,ch:0,cost:2500,inc:120},
+  {id:'solana',sym:'SOL',name:'Solana',col:'#b18cff',price:102.59,ch:0,cost:12000,inc:520},
+  {id:'zcash',sym:'ZEC',name:'Zcash',col:'#f4c35a',price:1320,ch:0,cost:60000,inc:2300},
+  {id:'ethereum',sym:'ETH',name:'Ethereum',col:'#8fa2ff',price:2358.47,ch:0,cost:300000,inc:10000},
+  {id:'bitcoin',sym:'BTC',name:'Bitcoin',col:'#f7931a',price:81208.39,ch:0,cost:1500000,inc:45000},
+];
+const UPG=[
+  {k:'jump',name:{ru:'Сила прыжка',uk:'Сила стрибка',en:'Jump power'},desc:{ru:'Прыжок выше на 6% за уровень',uk:'Стрибок вищий на 6% за рівень',en:'+6% jump height per level'},base:150,max:15},
+  {k:'magnet',name:{ru:'Магнит монет',uk:'Магніт монет',en:'Coin magnet'},desc:{ru:'Притягивает монеты издалека',uk:'Притягує монети здалеку',en:'Pulls coins in from afar'},base:220,max:10},
+  {k:'value',name:{ru:'Ценные монеты',uk:'Цінні монети',en:'Valuable coins'},desc:{ru:'+25% к стоимости монет',uk:'+25% до вартості монет',en:'+25% coin value'},base:180,max:20},
+  {k:'shield',name:{ru:'Страховка',uk:'Страховка',en:'Safety net'},desc:{ru:'Один спасительный прыжок при падении',uk:'Один рятівний стрибок під час падіння',en:'One rescue jump when you fall'},base:450,max:5},
+];
+const SKINS=[
+  {k:'satoshi',name:{ru:'Сатоши',uk:'Сатоші',en:'Satoshi'},cost:0,body:'#f7b32b',eye:'#1a1200',acc:'none'},
+  {k:'whale',name:{ru:'Кит',uk:'Кит',en:'Whale'},cost:2000,body:'#4fa3ff',eye:'#071a33',acc:'spout'},
+  {k:'laser',name:{ru:'Лазерные глаза',uk:'Лазерні очі',en:'Laser eyes'},cost:8000,body:'#2b2f4a',eye:'#ff3b3b',acc:'laser'},
+  {k:'cold',name:{ru:'Холодный кошелёк',uk:'Холодний гаманець',en:'Cold wallet'},cost:30000,body:'#bfe8ff',eye:'#123',acc:'hat'},
+  {k:'moon',name:{ru:'На Луну',uk:'На Місяць',en:'To the Moon'},cost:90000,body:'#d9d4ff',eye:'#21184a',acc:'helmet'},
+  {k:'gold',name:{ru:'Золотой блок',uk:'Золотий блок',en:'Gold block'},cost:400000,body:'#ffd257',eye:'#5a3a00',acc:'crown'},
+  {k:'diamond',name:{ru:'Алмазные руки',uk:'Діамантові руки',en:'Diamond hands'},cost:0,star:true,body:'#aee9f5',eye:'#0a3a4a',acc:'gem'},
+];
+
+/* ===== Состояние ===== */
+const KEY='minejump_v2';
+let S=load();
+function fresh(){return{bal:0,cards:{},upg:{},skins:{satoshi:true},skin:'satoshi',record:0,last:Date.now(),welcomed:false,games:0,earned:0,claims:0,ach:{},name:'',inv:{},active:{},runs:{},perks:{},cases:0,legend:0,stars:[],lang:'',pid:'p'+Math.random().toString(36).slice(2,10)}}
+function earn(v){S.bal+=v;S.earned+=v}
+function load(){try{const r=localStorage.getItem(KEY);if(r)return Object.assign(fresh(),JSON.parse(r))}catch(e){}return fresh()}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+function detectLang(){try{const c=(window.Telegram?.WebApp?.initDataUnsafe?.user?.language_code||navigator.language||'ru').slice(0,2);if(c==='uk')return'uk';if(c==='ru'||c==='be'||c==='kk')return'ru';return'en'}catch(e){return'ru'}}
+LANG=S.lang||detectLang();
+
+const $=s=>document.querySelector(s);
+const money=v=>'$'+(v>=1e6?(v/1e6).toFixed(2)+'M':v>=1e4?(v/1e3).toFixed(1)+'K':v.toFixed(2));
+const usd=v=>'$'+(v>=1000?v.toLocaleString('en-US',{maximumFractionDigits:0}):v>=1?v.toFixed(2):v.toFixed(4));
+const PERIOD=6e5; // 10 минут
+const recMul=()=>1+S.record/10000; // каждые 1000 очков рекорда = +10% к майнингу
+const cardLvl=c=>S.cards[c.sym]||0;
+const cardInc=c=>{const l=cardLvl(c);return l?c.inc*Math.pow(1.35,l-1):0};
+const buffOn=k=>(S.active[k]||0)>Date.now();
+const mineMul=()=>recMul()*(buffOn('mine2x')?2:1)*(S.perks.premium?1.5:1)*(buffOn('newbie')?1.4:1);
+const cardCost=c=>Math.round(c.cost*Math.pow(1.4,cardLvl(c))*(buffOn('discount')?0.8:1));
+const rate=()=>COINS.reduce((a,c)=>a+cardInc(c),0)*mineMul(); // доход за 10 минут
+const offCap=()=>S.perks.offline?12:3; // часов
+const upgLvl=k=>S.upg[k]||0;
+const upgCost=u=>Math.round(u.base*Math.pow(1.6,upgLvl(u.k)));
+
+let pending=0;
+function accrue(){const now=Date.now();const periods=Math.min((now-S.last)/PERIOD,offCap()*6);pending+=rate()*Math.max(0,periods);S.last=now}
+accrue();
+
+/* ===== Цены ===== */
+let live=false,priceTime='28.10.2026';
+async function loadPrices(){
+  try{
+    const ids=COINS.map(c=>c.id).join(',');
+    const r=await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd&include_24hr_change=true`);
+    if(!r.ok)throw 0;const d=await r.json();
+    COINS.forEach(c=>{if(d[c.id]){c.price=d[c.id].usd;c.ch=d[c.id].usd_24h_change||0}});
+    live=true;priceTime=new Date().toLocaleTimeString(LANG==='en'?'en-GB':LANG==='uk'?'uk-UA':'ru-RU',{hour:'2-digit',minute:'2-digit'});
+  }catch(e){live=false}
+  renderTicker();if(tab==='mine')render();
+}
+function renderTicker(){
+  const one=[...COINS].reverse().map(c=>`<span class="tk"><i>${c.sym}</i>${usd(c.price)}${live?` <span class="${c.ch>=0?'up':'down'}">${c.ch>=0?'▲':'▼'}${Math.abs(c.ch).toFixed(1)}%</span>`:''}</span>`).join('');
+  $('#ticker').innerHTML=one+one;
+}
+
+/* ===== Экраны ===== */
+let tab='mine';
+document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{tab=b.dataset.t;document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('on',x===b));stopGame();render();if(tab==='profile')LB.pull()});
+function chip(c){return`<div class="chip" style="background:${c.col}"><span>${c.sym}</span></div>`}
+function render(){
+  const m=$('#screen');m.className='';
+  if(tab==='mine'){
+    const mm=mineMul();
+    m.innerHTML=`<div class="claim"><div><small>${t('pend',{h:offCap()})}</small><span class="v" id="pend">${money(pending)}</span></div><button class="btn" id="claim" ${pending<0.01?'disabled':''}>${t('claim')}</button></div>
+    ${buffChips()}<h2>${t('cardsH')}</h2><p class="sub">${t('cardsSub',{r:S.record,m:recMul().toFixed(2)})}</p>
+    <div class="stack">${COINS.map((c,i)=>{const l=cardLvl(c),lock=!l&&i>0&&!cardLvl(COINS[i-1]),nextInc=c.inc*Math.pow(1.35,l)*mm;
+      return`<div class="card ${lock?'locked':''}">${chip(c)}<div class="meta"><b>${c.name} ${l?`<span class="l">${t('lvl')} ${l}</span>`:''}</b>
+      <span class="inc">${l?'+'+money(cardInc(c)*mm)+t('per'):t('willGive')+' +'+money(nextInc)+t('per')}</span><br><span class="l">1 ${c.sym} = ${usd(c.price)}</span></div>
+      <button class="btn" data-card="${i}" ${lock||S.bal<cardCost(c)?'disabled':''}>${lock?t('locked'):(l?t('upgrade'):t('buy'))+' '+(lock?'':money(cardCost(c)))}</button></div>`}).join('')}</div>
+    <div class="sect" style="margin-top:22px">${t('market')}</div><p class="sub" style="margin-bottom:10px">${live?t('liveP',{t:priceTime}):t('offP',{t:priceTime})}</p>
+    <div class="stack">${[...COINS].reverse().map(c=>`<div class="price-row">${chip(c)}<div class="meta"><b>${c.name}</b><span class="l">${c.sym}/USD</span></div><div class="p"><b>${usd(c.price)}</b>${live?`<span class="${c.ch>=0?'up':'down'}">${c.ch>=0?'+':''}${c.ch.toFixed(2)}% ${t('d24')}</span>`:''}</div></div>`).join('')}</div>
+    <p class="note">${t('note')}</p>`;
+    $('#claim').onclick=()=>{if(pending<0.01)return;earn(pending);S.claims++;toast('+'+money(pending));pending=0;save();refresh();render();checkAch()};
+    m.querySelectorAll('[data-card]').forEach(b=>b.onclick=()=>{const c=COINS[+b.dataset.card],cost=cardCost(c);if(S.bal<cost)return;S.bal-=cost;S.cards[c.sym]=cardLvl(c)+1;save();refresh();render();toast(c.name+' '+t('lvl')+' '+cardLvl(c));checkAch()});
+  }
+  else if(tab==='shop'){
+    m.innerHTML=`<h2>${t('upgH')}</h2><p class="sub">${t('upgSub')}</p>
+    <div class="stack">${UPG.map(u=>{const l=upgLvl(u.k),mx=l>=u.max;return`<div class="card"><div class="chip acc"><span>${l}</span></div><div class="meta"><b>${L(u.name)}</b><span class="l">${L(u.desc)} · ${l}/${u.max}</span></div>
+      <button class="btn" data-u="${u.k}" ${mx||S.bal<upgCost(u)?'disabled':''}>${mx?t('max'):money(upgCost(u))}</button></div>`}).join('')}</div>
+    <div class="sect">${t('skins')}</div><div class="skins">${SKINS.map(s=>`<div class="skin ${S.skin===s.k?'on':''}"><canvas width="128" height="128" data-sk="${s.k}"></canvas><b>${L(s.name)}</b>
+      ${S.skins[s.k]?`<button class="btn ${S.skin===s.k?'ghost':''}" data-use="${s.k}">${S.skin===s.k?t('worn'):t('wear')}</button>`:(s.star?`<button class="btn star" data-goto="store">${t('forStars')}</button>`:`<button class="btn" data-buy="${s.k}" ${S.bal<s.cost?'disabled':''}>${money(s.cost)}</button>`)}</div>`).join('')}</div>`;
+    m.querySelectorAll('[data-sk]').forEach(cv=>{const x=cv.getContext('2d');x.scale(2,2);drawHero(x,32,36,SKINS.find(s=>s.k===cv.dataset.sk),1.3)});
+    m.querySelectorAll('[data-u]').forEach(b=>b.onclick=()=>{const u=UPG.find(x=>x.k===b.dataset.u),c=upgCost(u);if(S.bal<c)return;S.bal-=c;S.upg[u.k]=upgLvl(u.k)+1;save();refresh();render();checkAch()});
+    m.querySelectorAll('[data-buy]').forEach(b=>b.onclick=()=>{const s=SKINS.find(x=>x.k===b.dataset.buy);if(S.bal<s.cost)return;S.bal-=s.cost;S.skins[s.k]=true;S.skin=s.k;save();refresh();render();checkAch()});
+    m.querySelectorAll('[data-use]').forEach(b=>b.onclick=()=>{S.skin=b.dataset.use;save();render()});
+    m.querySelectorAll('[data-goto]').forEach(b=>b.onclick=()=>$('#tab-store').click());
+  }
+  else if(tab==='jump'){m.className='game';startGame(m)}
+  else if(tab==='profile')renderProfile(m);
+  else if(tab==='store')renderStore(m);
+}
+function refresh(){$('#bal').textContent=money(S.bal);$('#rate').textContent='+'+money(rate())+t('per')}
+function toast(s){const d=document.createElement('div');d.className='toast';d.textContent=s;document.body.appendChild(d);setTimeout(()=>d.style.opacity=0,1400);setTimeout(()=>d.remove(),1800)}
+
+/* ===== Персонаж ===== */
+function rrect(x,X,Y,w,h,r){x.beginPath();if(x.roundRect){x.roundRect(X,Y,w,h,r)}else{x.moveTo(X+r,Y);x.arcTo(X+w,Y,X+w,Y+h,r);x.arcTo(X+w,Y+h,X,Y+h,r);x.arcTo(X,Y+h,X,Y,r);x.arcTo(X,Y,X+w,Y,r);x.closePath()}}
+function drawHero(x,cx,cy,sk,s=1){
+  x.save();x.translate(cx,cy);x.scale(s,s);
+  x.fillStyle=sk.body;rrect(x,-14,-16,28,30,9);x.fill();
+  x.fillStyle='rgba(0,0,0,.18)';x.fillRect(-14,8,28,6);
+  x.fillStyle=sk.eye;x.beginPath();x.arc(-5,-4,3,0,7);x.arc(5,-4,3,0,7);x.fill();
+  if(sk.acc==='laser'){x.strokeStyle='#ff3b3b';x.lineWidth=2;x.globalAlpha=.8;x.beginPath();x.moveTo(-5,-4);x.lineTo(-22,6);x.moveTo(5,-4);x.lineTo(22,6);x.stroke();x.globalAlpha=1}
+  if(sk.acc==='spout'){x.fillStyle='#9fd3ff';x.beginPath();x.arc(-3,-22,3,0,7);x.arc(3,-23,2.5,0,7);x.arc(0,-26,2.5,0,7);x.fill()}
+  if(sk.acc==='hat'){x.fillStyle='#e85d75';x.fillRect(-14,-20,28,6);x.beginPath();x.arc(0,-22,4,0,7);x.fill()}
+  if(sk.acc==='helmet'){x.strokeStyle='#ffffff';x.lineWidth=2;x.globalAlpha=.7;x.beginPath();x.arc(0,-2,19,0,7);x.stroke();x.globalAlpha=1}
+  if(sk.acc==='gem'){x.fillStyle='#5fd4ee';x.beginPath();x.moveTo(0,-30);x.lineTo(8,-22);x.lineTo(0,-16);x.lineTo(-8,-22);x.fill();x.fillStyle='#fff';x.fillRect(-18,-14,3,3);x.fillRect(16,2,3,3)}
+  if(sk.acc==='crown'){x.fillStyle='#fff3b0';x.beginPath();x.moveTo(-10,-16);x.lineTo(-10,-24);x.lineTo(-5,-19);x.lineTo(0,-26);x.lineTo(5,-19);x.lineTo(10,-24);x.lineTo(10,-16);x.fill()}
+  x.fillStyle=sk.eye;x.font='bold 11px JetBrains Mono, monospace';x.textAlign='center';x.fillText('₿',0,9);
+  x.restore();
+}
+
+/* ===== Игра «Прыжок» ===== */
+let G=null,raf=0,keysOff=null;
+function stopGame(){cancelAnimationFrame(raf);G=null;if(keysOff){keysOff();keysOff=null}}
+function startGame(m){
+  m.innerHTML=`<canvas id="cv"></canvas><div class="hud"><div><small>${t('score')}</small><b id="sc">0</b></div><div style="text-align:right"><small>${t('coinsRec',{r:S.record})}</small><b id="cc">$0</b></div></div>
+  <div class="overlay" id="ov"><div class="ov"><h3>${t('title')}</h3>${runChips()}<p>${t('howto')}</p>
+  <div class="kv"><span>${t('record')}</span><b>${S.record}</b></div><div class="kv"><span>${t('recBonus')}</span><b>×${recMul().toFixed(2)}</b></div>
+  <button class="btn" id="go">${t('play')}</button></div></div>`;
+  $('#go').onclick=play;
+}
+function play(){
+  stopGame();
+  const ov=$('#ov');ov.hidden=true;ov.style.display='none';
+  const cv=$('#cv'),x=cv.getContext('2d'),dpr=Math.min(devicePixelRatio||1,2);
+  const W=cv.clientWidth,H=cv.clientHeight;cv.width=W*dpr;cv.height=H*dpr;x.setTransform(dpr,0,0,dpr,0,0);
+  const sk=SKINS.find(s=>s.k===S.skin)||SKINS[0];
+  const use=k=>{if((S.runs[k]||0)>0){S.runs[k]--;return true}return false};
+  const bCoins=use('coins2x'),bSuper=use('super'),bRocket=use('rocket'),bShield=use('shield');save();
+  const jumpV=-(8.5*(1+upgLvl('jump')*.06))*(bSuper?1.25:1),coinVal=.5*(1+upgLvl('value')*.25)*(bCoins?2:1)*(S.perks.vip?2:1),mag=40+upgLvl('magnet')*18+(bCoins?30:0);
+  G={p:{x:W/2,y:H-120,vx:0,vy:jumpV},plats:[],coins:[],cam:bRocket?5000:0,maxH:bRocket?500:0,coinSum:0,shield:upgLvl('shield')+(bShield?2:0),dir:0};
+  if(bRocket)toast(t('rocketT'));
+  function rnd(a,b){return a+Math.random()*(b-a)}
+  function addPlat(y){
+    const h=G.maxH,r=Math.random();
+    let type='n';if(h>800&&r<.18)type='m';if(h>1500&&r>.86)type='b';if(r>.93)type='s';
+    const w=Math.max(46,72-h/400);
+    G.plats.push({x:rnd(0,W-w),y,w,type,vx:type==='m'?(Math.random()<.5?-1:1)*(1.2+h/4000):0,broken:false});
+    if(Math.random()<.35)G.coins.push({x:rnd(14,W-14),y:y-rnd(30,60),got:false});
+  }
+  let y=H-40;
+  G.plats.push({x:W/2-35,y:H-60,w:70,type:'n'});
+  while(y>-H*2){y-=rnd(55,90);addPlat(y)}
+  const keys=e=>{if(!G)return;if(e.key==='ArrowLeft')G.dir=e.type==='keydown'?-1:0;if(e.key==='ArrowRight')G.dir=e.type==='keydown'?1:0};
+  addEventListener('keydown',keys);addEventListener('keyup',keys);
+  keysOff=()=>{removeEventListener('keydown',keys);removeEventListener('keyup',keys)};
+  const dirAt=cx=>{const r=cv.getBoundingClientRect();return cx-r.left<r.width/2?-1:1};
+  cv.onpointerdown=e=>{if(G)G.dir=dirAt(e.clientX)};cv.onpointerup=cv.onpointerleave=cv.onpointercancel=()=>{if(G)G.dir=0};
+  cv.ontouchstart=e=>{e.preventDefault();if(G)G.dir=dirAt(e.touches[0].clientX)};cv.ontouchend=e=>{e.preventDefault();if(G&&!e.touches.length)G.dir=0};
+  function step(){
+    if(!G)return;const g=G,p=g.p;
+    p.vx+=(g.dir*0.9-p.vx)*.18;p.x+=p.vx*1.9;if(p.x<-15)p.x=W+15;if(p.x>W+15)p.x=-15;
+    p.vy+=.25;p.y+=p.vy;
+    if(p.vy>0)for(const pl of g.plats){if(pl.broken)continue;
+      if(p.x>pl.x-10&&p.x<pl.x+pl.w+10&&p.y+14>=pl.y&&p.y+14-p.vy<=pl.y+4){
+        if(pl.type==='b'){pl.broken=true;continue}
+        p.vy=pl.type==='s'?jumpV*1.7:jumpV;haptic('light');}}
+    for(const pl of g.plats)if(pl.type==='m'){pl.x+=pl.vx;if(pl.x<0||pl.x+pl.w>W)pl.vx*=-1}
+    for(const c of g.coins){if(c.got)continue;const dx=p.x-c.x,dy=p.y-c.y,d=Math.hypot(dx,dy);
+      if(d<mag&&(upgLvl('magnet')||bCoins)){c.x+=dx*.15;c.y+=dy*.15}
+      if(d<22){c.got=true;g.coinSum+=coinVal*(1+g.maxH/2000);haptic('light')}}
+    const lim=H*.4;if(p.y<lim){const d=lim-p.y;p.y=lim;g.cam+=d;g.plats.forEach(q=>q.y+=d);g.coins.forEach(q=>q.y+=d)}
+    g.maxH=Math.floor(g.cam/10);
+    g.plats=g.plats.filter(q=>q.y<H+40);g.coins=g.coins.filter(q=>q.y<H+40&&!q.got);
+    let top=Math.min(...g.plats.map(q=>q.y));while(top>-60){top-=55+Math.random()*(35+Math.min(g.maxH/40,40));addPlat(top)}
+    if(p.y>H+30){if(g.shield>0){g.shield--;p.y=H-10;p.vy=jumpV*1.8;toast(t('shieldT'))}else return end()}
+    draw();raf=requestAnimationFrame(step);
+  }
+  function draw(){
+    const g=G,grd=x.createLinearGradient(0,0,0,H);grd.addColorStop(0,'#c6ead3');grd.addColorStop(1,'#f4fbf6');x.fillStyle=grd;x.fillRect(0,0,W,H);
+    x.fillStyle='rgba(29,158,87,.22)';for(let i=0;i<40;i++){const sx=(i*97)%W,sy=((i*173+g.cam*.2)%H);x.fillRect(sx,sy,1.5,1.5)}
+    for(const pl of g.plats){if(pl.broken)continue;
+      x.fillStyle=pl.type==='m'?'#4f9fe0':pl.type==='b'?'#b08a5e':pl.type==='s'?'#f2b230':'#1d9e57';
+      rrect(x,pl.x,pl.y,pl.w,12,4);x.fill();
+      x.fillStyle='rgba(0,0,0,.25)';for(let i=6;i<pl.w-4;i+=10)x.fillRect(pl.x+i,pl.y+3,5,6);
+      if(pl.type==='s'){x.fillStyle='#fff6d6';x.fillRect(pl.x+pl.w/2-6,pl.y-6,12,6)}}
+    for(const c of g.coins){x.fillStyle='#ffd257';x.beginPath();x.arc(c.x,c.y,9,0,7);x.fill();x.fillStyle='#8a5a00';x.font='bold 10px JetBrains Mono, monospace';x.textAlign='center';x.fillText('$',c.x,c.y+4)}
+    drawHero(x,g.p.x,g.p.y,sk,1);
+    if(g.shield){x.fillStyle='#14a053';x.font='bold 12px JetBrains Mono, monospace';x.textAlign='left';x.fillText('+'+g.shield,10,H-12)}
+    $('#sc').textContent=g.maxH;$('#cc').textContent=money(g.coinSum);
+  }
+  function end(){
+    const g=G;stopGame();
+    const score=g.maxH,old=S.record,isRec=score>old;
+    const heightPay=score*0.05*(1+old/5000),recPay=isRec?(score-old)*0.1:0,total=heightPay+g.coinSum+recPay;
+    if(isRec)S.record=score;earn(total);S.games++;save();refresh();checkAch();LB.push();haptic(isRec?'success':'error');
+    const ov=$('#ov');ov.hidden=false;ov.style.display='';
+    ov.innerHTML=`<div class="ov"><h3>${isRec?t('newRec'):t('fall')}</h3><div class="big">+${money(total)}</div>
+    <div class="kv"><span>${t('height',{s:score})}</span><b>${money(heightPay)}</b></div><div class="kv"><span>${t('coins')}</span><b>${money(g.coinSum)}</b></div>
+    ${isRec?`<div class="kv"><span>${t('recPay')}</span><b>${money(recPay)}</b></div>`:''}
+    <div class="kv"><span>${t('record')}</span><b>${S.record}</b></div><div class="kv"><span>${t('mineBonus')}</span><b>×${recMul().toFixed(2)}</b></div>
+    <button class="btn" id="go">${t('again')}</button></div>`;
+    $('#go').onclick=play;
+  }
+  raf=requestAnimationFrame(step);
+}
+function haptic(k){try{const h=window.Telegram?.WebApp?.HapticFeedback;if(!h)return;k==='light'?h.impactOccurred('light'):h.notificationOccurred(k)}catch(e){}}
+
+/* ===== Баффы, кейсы, звёзды ===== */
+const BUFFS={
+  mine30:{n:{ru:'Турбо-ферма',uk:'Турбо-ферма',en:'Turbo farm'},d:{ru:'×2 доход майнинга на 30 мин',uk:'×2 дохід майнінгу на 30 хв',en:'×2 mining income for 30 min'},t:'timed',k:'mine2x',ms:18e5},
+  mine2h:{n:{ru:'Турбо-ферма+',uk:'Турбо-ферма+',en:'Turbo farm+'},d:{ru:'×2 доход майнинга на 2 ч',uk:'×2 дохід майнінгу на 2 год',en:'×2 mining income for 2 h'},t:'timed',k:'mine2x',ms:72e5},
+  mine8h:{n:{ru:'Мега-ферма',uk:'Мега-ферма',en:'Mega farm'},d:{ru:'×2 доход майнинга на 8 ч',uk:'×2 дохід майнінгу на 8 год',en:'×2 mining income for 8 h'},t:'timed',k:'mine2x',ms:288e5},
+  disc1h:{n:{ru:'Чёрная пятница',uk:'Чорна п’ятниця',en:'Black Friday'},d:{ru:'−20% на майнинг-карты 1 ч',uk:'−20% на майнінг-карти 1 год',en:'−20% on mining cards for 1 h'},t:'timed',k:'discount',ms:36e5},
+  coins3:{n:{ru:'Двойные монеты',uk:'Подвійні монети',en:'Double coins'},d:{ru:'×2 монеты и магнит на 3 забега',uk:'×2 монети й магніт на 3 забіги',en:'×2 coins and magnet for 3 runs'},t:'runs',k:'coins2x',c:3},
+  coins10:{n:{ru:'Монетный дождь',uk:'Монетний дощ',en:'Coin rain'},d:{ru:'×2 монеты и магнит на 10 забегов',uk:'×2 монети й магніт на 10 забігів',en:'×2 coins and magnet for 10 runs'},t:'runs',k:'coins2x',c:10},
+  super3:{n:{ru:'Пружинные ноги',uk:'Пружинні ноги',en:'Spring legs'},d:{ru:'+25% к прыжку на 3 забега',uk:'+25% до стрибка на 3 забіги',en:'+25% jump for 3 runs'},t:'runs',k:'super',c:3},
+  super10:{n:{ru:'Антигравитация',uk:'Антигравітація',en:'Antigravity'},d:{ru:'+25% к прыжку на 10 забегов',uk:'+25% до стрибка на 10 забігів',en:'+25% jump for 10 runs'},t:'runs',k:'super',c:10},
+  rocket3:{n:{ru:'Ракета',uk:'Ракета',en:'Rocket'},d:{ru:'Старт с высоты 500 в 3 забегах',uk:'Старт з висоти 500 у 3 забігах',en:'Start at height 500 for 3 runs'},t:'runs',k:'rocket',c:3},
+  rocket10:{n:{ru:'Шаттл',uk:'Шатл',en:'Shuttle'},d:{ru:'Старт с высоты 500 в 10 забегах',uk:'Старт з висоти 500 у 10 забігах',en:'Start at height 500 for 10 runs'},t:'runs',k:'rocket',c:10},
+  shield3:{n:{ru:'Двойная страховка',uk:'Подвійна страховка',en:'Double safety net'},d:{ru:'+2 страховки на 3 забега',uk:'+2 страховки на 3 забіги',en:'+2 safety nets for 3 runs'},t:'runs',k:'shield',c:3},
+  cash1:{n:{ru:'Мешок монет',uk:'Мішок монет',en:'Coin bag'},d:{ru:'Доход за 1 час, не меньше $500',uk:'Дохід за 1 годину, не менше $500',en:'1 hour of income, at least $500'},t:'cash',h:1,min:500},
+  cash4:{n:{ru:'Сейф',uk:'Сейф',en:'Safe'},d:{ru:'Доход за 4 часа, не меньше $4K',uk:'Дохід за 4 години, не менше $4K',en:'4 hours of income, at least $4K'},t:'cash',h:4,min:4000},
+  cash12:{n:{ru:'Хранилище',uk:'Сховище',en:'Vault'},d:{ru:'Доход за 12 часов, не меньше $25K',uk:'Дохід за 12 годин, не менше $25K',en:'12 hours of income, at least $25K'},t:'cash',h:12,min:25000},
+  skin:{n:{ru:'Случайный скин',uk:'Випадковий скін',en:'Random skin'},d:{ru:'Скин, которого у вас ещё нет',uk:'Скін, якого у вас ще немає',en:'A skin you don’t own yet'},t:'skin'},
+};
+const CASES=[
+  {k:'common',rar:'common',cost:1500,drop:[['mine30',30],['coins3',25],['super3',20],['shield3',15],['cash1',10]]},
+  {k:'rare',rar:'rare',cost:8000,drop:[['mine2h',25],['rocket3',20],['disc1h',20],['coins10',15],['cash4',15],['skin',5]]},
+  {k:'legend',rar:'legend',cost:40000,drop:[['mine8h',25],['rocket10',20],['super10',15],['cash12',20],['skin',20]]},
+];
+const RCOL={common:'var(--r-common)',rare:'var(--r-rare)',legend:'var(--r-legend)'};
+const PACKS=[ // цены в звёздах дублируются на сервере (server.js), оплата проверяется там
+  {k:'start',stars:25,n:{ru:'Стартовый набор',uk:'Стартовий набір',en:'Starter pack'},d:{ru:'$25 000 и 3 редких кейса',uk:'$25 000 і 3 рідкісні кейси',en:'$25,000 and 3 rare cases'}},
+  {k:'premium',stars:50,once:true,n:{ru:'Премиум-ферма',uk:'Преміум-ферма',en:'Premium farm'},d:{ru:'Навсегда ×1.5 к доходу майнинга',uk:'Назавжди ×1.5 до доходу майнінгу',en:'Permanent ×1.5 mining income'}},
+  {k:'offline',stars:75,once:true,n:{ru:'Ночная смена',uk:'Нічна зміна',en:'Night shift'},d:{ru:'Офлайн-доход копится 12 ч вместо 3',uk:'Офлайн-дохід накопичується 12 год замість 3',en:'Offline income builds up for 12 h instead of 3'}},
+  {k:'legendpack',stars:100,n:{ru:'Легендарный набор',uk:'Легендарний набір',en:'Legendary pack'},d:{ru:'3 легендарных кейса и скин «Алмазные руки»',uk:'3 легендарні кейси та скін «Діамантові руки»',en:'3 legendary cases and the Diamond hands skin'}},
+  {k:'whale',stars:150,n:{ru:'Кит',uk:'Кит',en:'Whale'},d:{ru:'$1 000 000, VIP ×2 монеты в прыжке навсегда и скин «Алмазные руки»',uk:'$1 000 000, VIP ×2 монети в стрибку назавжди та скін «Діамантові руки»',en:'$1,000,000, permanent VIP ×2 jump coins and the Diamond hands skin'}},
+];
+function grantPack(k){
+  if(k==='start'){earn(25000);S.inv.case_rare=(S.inv.case_rare||0)+3}
+  if(k==='premium')S.perks.premium=true;
+  if(k==='offline')S.perks.offline=true;
+  if(k==='legendpack'){S.inv.case_legend=(S.inv.case_legend||0)+3;S.skins.diamond=true}
+  if(k==='whale'){earn(1e6);S.perks.vip=true;S.skins.diamond=true}
+  S.stars.push(k);save();refresh();checkAch();
+  const p=PACKS.find(p=>p.k===k);toast(t('thanks',{n:p?L(p.n):k}));
+}
+function fmtLeft(ms){const m=Math.ceil(ms/6e4);return m>=60?Math.floor(m/60)+' '+t('h')+' '+(m%60)+' '+t('min'):m+' '+t('min')}
+function chips(arr,center){return arr.length?`<div class="bchips"${center?' style="justify-content:center;margin:0"':''}>${arr.map(s=>`<span class="bchip">${s}</span>`).join('')}</div>`:''}
+function buffChips(){
+  const now=Date.now(),out=[];
+  if((S.active.mine2x||0)>now)out.push(t('x2mine')+' · '+fmtLeft(S.active.mine2x-now));
+  if((S.active.discount||0)>now)out.push(t('disc')+' · '+fmtLeft(S.active.discount-now));
+  if((S.active.newbie||0)>now)out.push(t('newbie',{t:fmtLeft(S.active.newbie-now)}));
+  if(S.perks.premium)out.push(t('prem'));
+  if(S.perks.offline)out.push(t('off12'));
+  return chips(out);
+}
+function runChips(){
+  const out=Object.entries(S.runs).filter(([k,v])=>v>0).map(([k,v])=>t('r_'+k)+' ×'+v);
+  if(S.perks.vip)out.push(t('vip'));
+  return chips(out,true);
+}
+function rollCase(cs){
+  const tot=cs.drop.reduce((a,d)=>a+d[1],0);let r=Math.random()*tot;
+  for(const [id,w] of cs.drop){if((r-=w)<0)return id}return cs.drop[0][0];
+}
+function applyBuff(id){
+  const b=BUFFS[id];
+  if(b.t==='timed'){S.active[b.k]=Math.max(Date.now(),S.active[b.k]||0)+b.ms;return t('bActive',{n:L(b.n)})}
+  if(b.t==='runs'){S.runs[b.k]=(S.runs[b.k]||0)+b.c;return t('bCharges',{n:L(b.n)})}
+  if(b.t==='cash'){const v=Math.max(b.min,rate()*6*b.h);earn(v);return '+'+money(v)}
+  if(b.t==='skin'){const pool=SKINS.filter(s=>!s.star&&!S.skins[s.k]);if(!pool.length){const v=20000;earn(v);return t('allSkins',{v:money(v)})}
+    const s=pool[Math.floor(Math.random()*pool.length)];S.skins[s.k]=true;return t('skinGot',{n:L(s.name)})}
+}
+function openCase(cs,fromInv){
+  if(fromInv){if(!(S.inv['case_'+cs.k]>0))return;S.inv['case_'+cs.k]--}
+  else{if(S.bal<cs.cost)return;S.bal-=cs.cost}
+  const id=rollCase(cs);S.cases++;if(cs.rar==='legend')S.legend++;
+  S.inv[id]=(S.inv[id]||0)+1;save();refresh();
+  const d=document.createElement('div');d.className='overlay';d.style.position='fixed';d.style.zIndex=30;
+  d.innerHTML=`<div class="ov"><span class="rar" style="color:${RCOL[cs.rar]}">${t('caseN',{n:t(cs.rar)})}</span><div class="reel" id="reel">…</div><p id="rdesc">&nbsp;</p><div style="display:flex;gap:8px"><button class="btn ghost" id="rlater" style="flex:1" hidden>${t('toInv')}</button><button class="btn" id="rnow" style="flex:1" hidden>${t('activate')}</button></div></div>`;
+  document.body.appendChild(d);
+  const pool=cs.drop.map(x=>L(BUFFS[x[0]].n));let i=0;const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const spin=setInterval(()=>{$('#reel').textContent=pool[i++%pool.length]},70);
+  setTimeout(()=>{clearInterval(spin);$('#reel').textContent=L(BUFFS[id].n);$('#reel').style.color=RCOL[cs.rar];$('#rdesc').textContent=L(BUFFS[id].d);
+    $('#rlater').hidden=false;$('#rnow').hidden=false;haptic('success');checkAch()},reduce?0:1300);
+  $('#rlater').onclick=()=>{d.remove();render()};
+  $('#rnow').onclick=()=>{S.inv[id]--;const msg=applyBuff(id);save();refresh();d.remove();toast(msg);render()};
+}
+function renderStore(m){
+  const inv=Object.entries(S.inv).filter(([k,v])=>v>0);
+  const tg=window.Telegram?.WebApp,canPay=!!(tg&&tg.initData);
+  m.innerHTML=`<h2>${t('tStore')}</h2><p class="sub">${t('storeSub')}</p>
+  ${buffChips()}
+  <div class="cases">${CASES.map(c=>`<div class="case"><div class="box" style="background:${RCOL[c.rar]}"></div><span class="rar" style="color:${RCOL[c.rar]}">${t(c.rar)}</span>
+    <small>${t('nBuffs',{n:c.drop.length})}</small><button class="btn" data-case="${c.k}" ${S.bal<c.cost?'disabled':''}>${money(c.cost)}</button></div>`).join('')}</div>
+  <div class="sect">${t('drops')}</div>
+  <div class="stack">${CASES.map(c=>`<div class="note" style="margin:0"><b style="color:${RCOL[c.rar]}">${t(c.rar)}:</b> ${c.drop.map(([id,w])=>L(BUFFS[id].n)+' '+Math.round(w/c.drop.reduce((a,x)=>a+x[1],0)*100)+'%').join(' · ')}</div>`).join('')}</div>
+  <div class="sect">${t('inv')}</div>
+  ${inv.length?`<div class="stack">${inv.map(([k,v])=>{const isCase=k.startsWith('case_'),cs=isCase&&CASES.find(c=>'case_'+c.k===k),b=BUFFS[k];if(!isCase&&!b)return'';
+    return`<div class="card"><div class="chip acc" style="${isCase?'background:'+RCOL[cs.rar]:''}"><span>×${v}</span></div><div class="meta"><b>${isCase?t('caseN',{n:t(cs.rar)}):L(b.n)}</b><span class="l">${isCase?t('starGift'):L(b.d)}</span></div>
+    <button class="btn" data-inv="${k}">${isCase?t('open'):t('activate')}</button></div>`}).join('')}</div>`:`<p class="note" style="margin:0">${t('invEmpty')}</p>`}
+  <div class="sect">${t('starsH')}</div>
+  <p class="sub" style="margin-bottom:10px">${t('starsSub')} ${canPay?t('payTg'):t('payNo')}</p>
+  <div class="stack">${PACKS.map(p=>{const own=p.once&&S.perks[p.k];return`<div class="card"><div class="chip star"><span>★</span></div><div class="meta"><b>${L(p.n)}</b><span class="l">${L(p.d)}</span></div>
+    <button class="btn star" data-pack="${p.k}" ${own||!canPay?'disabled':''}>${own?t('bought'):'★ '+p.stars}</button></div>`}).join('')}</div>`;
+  m.querySelectorAll('[data-case]').forEach(b=>b.onclick=()=>openCase(CASES.find(c=>c.k===b.dataset.case),false));
+  m.querySelectorAll('[data-inv]').forEach(b=>b.onclick=()=>{const k=b.dataset.inv;
+    if(k.startsWith('case_'))return openCase(CASES.find(c=>'case_'+c.k===k),true);
+    S.inv[k]--;const msg=applyBuff(k);save();refresh();toast(msg);checkAch();render()});
+  m.querySelectorAll('[data-pack]').forEach(b=>b.onclick=()=>buyPack(b.dataset.pack));
+}
+async function buyPack(k){
+  const tg=window.Telegram?.WebApp;if(!tg||!tg.initData)return toast(t('openTg'));
+  try{
+    const r=await fetch('api/invoice',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({initData:tg.initData,pack:k,lang:LANG})});
+    const j=await r.json();if(!j.link)return toast(j.error||t('invoiceErr'));
+    tg.openInvoice(j.link,st=>{if(st==='paid')setTimeout(claimStars,800);else if(st==='failed')toast(t('payFail'))});
+  }catch(e){toast(t('noServer'))}
+}
+async function claimStars(){
+  const tg=window.Telegram?.WebApp;if(!tg||!tg.initData)return;
+  try{
+    const r=await fetch('api/claim',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({initData:tg.initData})});
+    const j=await r.json();(j.packs||[]).forEach(grantPack);
+    (j.perks||[]).forEach(k=>{if(k==='premium'||k==='offline'||k==='vip')S.perks[k]=true;if(k==='diamond')S.skins.diamond=true});save();refresh();if(tab==='store')render();
+  }catch(e){}
+}
+
+/* ===== Достижения ===== */
+const A=(ru,uk,en)=>({ru,uk,en});
+const ACH=[
+  {k:'card1',n:A('Первая ферма','Перша ферма','First farm'),d:A('Купить первую карту','Купити першу карту','Buy your first card'),r:200,t:()=>Object.keys(S.cards).length>=1},
+  {k:'card3',n:A('Майнинг-цех','Майнінг-цех','Mining workshop'),d:A('Открыть 3 карты','Відкрити 3 карти','Unlock 3 cards'),r:3000,t:()=>Object.keys(S.cards).length>=3},
+  {k:'eth',n:A('Эфирный кран','Ефірний кран','Ether tap'),d:A('Открыть карту ETH','Відкрити карту ETH','Unlock the ETH card'),r:30000,t:()=>cardLvl(COINS[4])>0},
+  {k:'btc',n:A('Свой биткоин','Свій біткоїн','Your own bitcoin'),d:A('Открыть карту BTC','Відкрити карту BTC','Unlock the BTC card'),r:200000,t:()=>cardLvl(COINS[5])>0},
+  {k:'lvl5',n:A('Разгон','Розгін','Overclock'),d:A('Любая карта 5 уровня','Будь-яка карта 5 рівня','Any card at level 5'),r:2500,t:()=>COINS.some(c=>cardLvl(c)>=5)},
+  {k:'h500',n:A('Взлёт','Зліт','Lift-off'),d:A('Рекорд 500 в прыжках','Рекорд 500 у стрибках','Reach 500 in Jump'),r:300,t:()=>S.record>=500},
+  {k:'h2000',n:A('Высотник','Висотник','High flyer'),d:A('Рекорд 2000','Рекорд 2000','Reach 2000'),r:2000,t:()=>S.record>=2000},
+  {k:'h5000',n:A('На Луну','На Місяць','To the Moon'),d:A('Рекорд 5000','Рекорд 5000','Reach 5000'),r:15000,t:()=>S.record>=5000},
+  {k:'g25',n:A('Неутомимый','Невтомний','Tireless'),d:A('Сыграть 25 забегов','Зіграти 25 забігів','Play 25 runs'),r:1500,t:()=>S.games>=25},
+  {k:'up5',n:A('Прокачанный','Прокачаний','Upgraded'),d:A('Улучшение героя 5 уровня','Покращення героя 5 рівня','A hero upgrade at level 5'),r:2000,t:()=>UPG.some(u=>upgLvl(u.k)>=5)},
+  {k:'sk3',n:A('Модник','Модник','Fashionista'),d:A('Собрать 3 скина','Зібрати 3 скіни','Collect 3 skins'),r:5000,t:()=>Object.keys(S.skins).length>=3},
+  {k:'cl10',n:A('Терпение','Терпіння','Patience'),d:A('Забрать офлайн-доход 10 раз','Забрати офлайн-дохід 10 разів','Claim offline income 10 times'),r:1000,t:()=>S.claims>=10},
+  {k:'e10k',n:A('Пятизначный','П’ятизначний','Five figures'),d:A('Заработать всего $10K','Заробити загалом $10K','Earn $10K in total'),r:1000,t:()=>S.earned>=1e4},
+  {k:'e1m',n:A('Миллионер','Мільйонер','Millionaire'),d:A('Заработать всего $1M','Заробити загалом $1M','Earn $1M in total'),r:50000,t:()=>S.earned>=1e6},
+  {k:'case1',n:A('Азарт','Азарт','Thrill'),d:A('Открыть первый кейс','Відкрити перший кейс','Open your first case'),r:500,t:()=>S.cases>=1},
+  {k:'case25',n:A('Охотник за баффами','Мисливець за бафами','Buff hunter'),d:A('Открыть 25 кейсов','Відкрити 25 кейсів','Open 25 cases'),r:15000,t:()=>S.cases>=25},
+  {k:'legend',n:A('Легенда','Легенда','Legend'),d:A('Выбить легендарный бафф','Вибити легендарний баф','Win a legendary buff'),r:10000,t:()=>S.legend>=1},
+  {k:'star',n:A('Звёздный','Зірковий','Stellar'),d:A('Поддержать игру звёздами','Підтримати гру зірками','Support the game with Stars'),r:5000,t:()=>S.stars.length>=1},
+];
+function checkAch(){
+  let got=[];
+  for(const a of ACH)if(!S.ach[a.k]&&a.t()){S.ach[a.k]=Date.now();earn(a.r);got.push(a)}
+  if(got.length){save();refresh();got.forEach((a,i)=>setTimeout(()=>toast(t('achT',{n:L(a.n),v:money(a.r)})),i*1900));haptic('success');if(tab==='profile')render()}
+}
+
+/* ===== Имя игрока ===== */
+function defaultName(){try{const u=window.Telegram?.WebApp?.initDataUnsafe?.user;if(u)return(u.username||u.first_name||'').slice(0,18)}catch(e){}return t('miner')+'-'+S.pid.slice(1,5).toUpperCase()}
+if(!S.name)S.name=defaultName();
+const AVATARS=['🚀','🐋','🦊','🐸','🐱','🐶','🤖','👾','💎','🔥','🦁','🐼','🐻','🦄','👽','😎','⛏️','🌙'];
+const myAvatar=()=>(!S.avatar||S.avatar==='hero')?'h:'+S.skin:S.avatar;
+function avHTML(a,cls){a=a||'h:satoshi';if(a.startsWith('h:'))return`<canvas class="${cls}" width="64" height="64" data-av="${a.slice(2).replace(/[^a-z]/g,'')}"></canvas>`;return`<span class="${cls}" data-emo></span>`}
+function paintAv(root,rows){root.querySelectorAll('canvas[data-av]').forEach(cv=>{const x=cv.getContext('2d');const sk=SKINS.find(s=>s.k===cv.dataset.av)||SKINS[0];x.scale(cv.width/64,cv.width/64);drawHero(x,32,36,sk,1.25)})}
+const playerCard=()=>({avatar:myAvatar(),name:S.name,record:S.record,earned:Math.round(S.earned),cards:Object.keys(S.cards).length,skin:S.skin,ach:Object.keys(S.ach).length,ts:Date.now()});
+
+/* ===== Рейтинг =====
+   1) в Telegram с сервером (server.js): /api/top и /api/score
+   2) в превью Claude: общая база артефакта
+   3) иначе: только локальный результат */
+const LB={mode:'local',rows:[],me:null,db:null,last:'',
+  async init(){
+    // сервер на бесплатном хостинге может просыпаться до минуты — пробуем несколько раз
+    for(let i=0;i<4;i++){
+      try{const r=await fetch('api/top',{cache:'no-store'});if(r.ok&&(r.headers.get('content-type')||'').includes('json')){this.mode='server';this.rows=(await r.json()).players||[];if(tab==='profile')render();
+        await this.push(true);setInterval(()=>this.pull(),30000);setInterval(()=>this.push(true),300000);return}
+        if(r.status===404)break}catch(e){}
+      await new Promise(r=>setTimeout(r,5000));
+    }
+    try{
+      if(window.claude?.use){const db=await claude.use('db'),user=await claude.use('user');
+        if(db&&user){const id=await user.id();if(id){this.db=db;this.me=id;this.mode='claude';
+          db.collection('players').orderBy('record','desc').limit(200).onSnapshot(q=>{this.rows=q.docs.map(d=>({id:d.id,...d.data()}));if(tab==='profile')render()},()=>{});
+          this.push(true);return}}}
+    }catch(e){}
+  },
+  async pull(){if(this.mode!=='server')return;await this.push();try{const r=await fetch('api/top',{cache:'no-store'});this.rows=(await r.json()).players||[];if(tab==='profile')render()}catch(e){}},
+  async push(force){
+    if(this.mode==='local')return;
+    const sig=JSON.stringify({...playerCard(),ts:0});if(!force&&sig===this.last)return;this.last=sig;
+    try{
+      if(this.mode==='claude')await this.db.collection('players').doc(this.me).set(playerCard());
+      if(this.mode==='server'){const r=await fetch('api/score',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({initData:window.Telegram?.WebApp?.initData||'',pid:S.pid,...playerCard()})});const j=await r.json();if(j.players){this.rows=j.players;this.me=j.me}if(tab==='profile')render()}
+    }catch(e){}
+  },
+  list(){
+    if(this.mode==='local')return[{id:'me',...playerCard(),isMe:true}];
+    const rows=this.rows.map(r=>({...r,isMe:r.id===this.me}));
+    if(!rows.some(r=>r.isMe))rows.push({id:this.me,...playerCard(),isMe:true});
+    return rows.sort((a,b)=>b.record-a.record||b.earned-a.earned);
+  }
+};
+
+function langSwitch(){return`<div class="langs" role="group" aria-label="${t('lang')}">${[['ru','RU'],['uk','UA'],['en','EN']].map(([k,l])=>`<button data-lang="${k}" class="${LANG===k?'on':''}">${l}</button>`).join('')}</div>`}
+function bindLang(root){root.querySelectorAll('[data-lang]').forEach(b=>b.onclick=()=>setLang(b.dataset.lang))}
+function setLang(k){LANG=k;S.lang=k;save();applyStatic();refresh();loadPrices();render();const w=$('.welcome');if(w)showWelcome(w)}
+
+function renderProfile(m){
+  const rows=LB.list(),place=rows.findIndex(r=>r.isMe)+1;
+  const owned=COINS.filter(c=>cardLvl(c)).length,achN=Object.keys(S.ach).length;
+  const medal=i=>i<3?`<span class="medal" style="background:${['#e0a82e','#9aa8b2','#c27b48'][i]}">${i+1}</span>`:i+1;
+  m.innerHTML=`<div class="prof"><div id="pav">${avHTML(myAvatar(),"bigav")}</div><div style="min-width:0">
+    <div class="nm"><input id="pname" maxlength="18" value="" aria-label="${t('nameAria')}"><button class="btn ghost" id="psave" style="min-width:0">${t('save')}</button></div>
+    <div class="rk">${place?t('place',{p:place,n:rows.length}):''}</div></div></div>
+  <div class="sect">${t('avatar')}</div><div class="avs"><button data-avpick="hero" class="${myAvatar().startsWith('h:')?'on':''}" aria-label="${t('avHero')}"><canvas width="64" height="64" data-av="${S.skin}"></canvas></button>${AVATARS.map(e=>`<button data-avpick="${e}" class="${S.avatar===e?'on':''}">${e}</button>`).join('')}</div>
+  <div class="sect">${t('lang')}</div>${langSwitch()}
+  <div class="sect">${t('progress')}</div>
+  <div class="stats">
+    <div class="stat"><small>${t('record')}</small><b>${S.record}</b></div>
+    <div class="stat"><small>${t('games')}</small><b>${S.games}</b></div>
+    <div class="stat"><small>${t('earned')}</small><b>${money(S.earned)}</b></div>
+    <div class="stat"><small>${t('income')}</small><b>${money(rate())}${t('per')}</b></div>
+    <div class="stat"><small>${t('recBonus')}</small><b>×${recMul().toFixed(2)}</b></div>
+    <div class="stat"><small>${t('achs')}</small><b>${achN}/${ACH.length}</b></div>
+  </div>
+  <div class="sect">${t('cardsOf',{a:owned,b:COINS.length})}</div>
+  <div class="prog">${COINS.map(c=>`<div class="prow"><span><b>${c.sym}</b></span><div class="bar"><i style="width:${Math.min(cardLvl(c)/10,1)*100}%"></i></div><span>${cardLvl(c)?t('lvl')+' '+cardLvl(c):'—'}</span></div>`).join('')}</div>
+  <div class="sect">${t('heroOf',{a:Object.keys(S.skins).length,b:SKINS.length})}</div>
+  <div class="prog">${UPG.map(u=>`<div class="prow"><span style="font-size:12px">${L(u.name)}</span><div class="bar"><i style="width:${upgLvl(u.k)/u.max*100}%"></i></div><span>${upgLvl(u.k)}/${u.max}</span></div>`).join('')}</div>
+  <div class="sect">${t('rating')}</div>
+  <div class="lb">${rows.slice(0,200).map((r,i)=>`<div class="lr ${r.isMe?'me':''}"><span class="n">${medal(i)}</span>${avHTML(r.avatar,"av")}<span class="nm" data-nm="${i}"></span><span class="sc">${r.record}<small>${money(r.earned||0)}</small></span></div>`).join('')}
+  ${LB.mode==='local'?`<div class="lbnote">${t('lbLocal')}</div>`:''}</div>
+  <div class="sect">${t('achs')}</div>
+  <div class="achs">${ACH.map(a=>`<div class="ach ${S.ach[a.k]?'on':'off'}"><b>${S.ach[a.k]?'✓ ':''}${L(a.n)}</b><small>${L(a.d)}</small><span class="rw">+${money(a.r)}</span></div>`).join('')}</div>`;
+  $('#pname').value=S.name;
+  rows.slice(0,200).forEach((r,i)=>{m.querySelector(`[data-nm="${i}"]`).textContent=(r.name||t('player'))+(r.isMe?' '+t('you'):'')});
+  const big=$('#pav [data-emo]');if(big)big.textContent=myAvatar();
+  m.querySelectorAll('.lr').forEach((row,i)=>{const e=row.querySelector('[data-emo]');if(e)e.textContent=String(rows[i].avatar||'').slice(0,8)});
+  paintAv(m);
+  m.querySelectorAll('[data-avpick]').forEach(b=>b.onclick=()=>{S.avatar=b.dataset.avpick;save();LB.push();render()});
+  bindLang(m);
+  $('#psave').onclick=()=>{const v=$('#pname').value.trim().replace(/\s+/g,' ').slice(0,18);if(v.length<2){toast(t('nameShort'));return}S.name=v;save();LB.push();toast(t('nameSaved'));render()};
+  $('#pname').onkeydown=e=>{if(e.key==='Enter')$('#psave').click()};
+}
+
+function showWelcome(d){
+  d.innerHTML=`<div class="ov"><h3>${t('title')}</h3><div style="display:flex;justify-content:center">${langSwitch()}</div><div class="big">+$1000</div><p>${t('welcome')}${t('newbieW')}</p><button class="btn" id="wok">${t('start')}</button></div>`;
+  bindLang(d);$('#wok').onclick=()=>d.remove();
+}
+
+/* ===== Старт ===== */
+try{const tg=window.Telegram?.WebApp;if(tg){tg.ready();tg.expand();tg.setHeaderColor?.('#f2f8f3');tg.setBackgroundColor?.('#f2f8f3')}}catch(e){}
+applyStatic();renderTicker();refresh();render();loadPrices();LB.init().then(()=>{claimStars();if(tab==='store'||tab==='profile')render()});setTimeout(checkAch,800);
+setInterval(()=>LB.push(),60000);setInterval(loadPrices,60000);
+setInterval(()=>{accrue();save();const pe=$('#pend');if(pe)pe.textContent=money(pending);const b=$('#claim');if(b)b.disabled=pending<0.01;refresh()},1000);
+if(S.welcomed&&!S.newbieGiven){S.newbieGiven=true;S.active.newbie=Date.now()+36e5;save();setTimeout(()=>toast(t('newbie',{t:fmtLeft(36e5)})),600)}
+if(!S.welcomed){
+  S.welcomed=true;earn(1000);S.newbieGiven=true;S.active.newbie=Date.now()+36e5;save();refresh();
+  const d=document.createElement('div');d.className='overlay welcome';d.style.position='fixed';d.style.zIndex=30;
+  document.body.appendChild(d);showWelcome(d);
+}
+</script>
+</body>
+</html>
